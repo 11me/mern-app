@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Simple clean script
+
+helm uninstall mern-app -n mern
+kubectl delete namespace mern
+minikube addons disable ingress
+minikube image rm mongo
+minikube image rm 11me/mern_client:v1
+minikube image rm 11me/mern_server:v1
+minikube image rm 11me/mongo_health:v1
+minikube stop

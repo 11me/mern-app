@@ -1,0 +1,129 @@
+#!/bin/sh
+#
+# Deployment script for MERN application
+
+# Globals
+CHART_LOC="$(pwd)/mernChart"
+CHART_NAME="mern-app"
+NAMESPACE="mern"
+DOMAIN="http://mern-app.local"
+
+#######################################
+# Check if program is installed.
+# Arguments:
+#   Program to search.
+# Returns:
+#   Non-zero value if program not found.
+#######################################
+is_installed() {
+  echo "Checking $1 ..."
+  test -n "$(command -v "$1")" || (echo "Error: $1 is not found" && exit 1)
+}
+
+#######################################
+# Enable minikube addon.
+# Arguments:
+#   Minikube addon name.
+# Outputs:
+#   Writes info to stdout.
+# Returns:
+#   Non-zero value if error occured.
+#######################################
+minikube_enable_ingress() {
+  minikube addons enable ingress # >/dev/null 2>&1
+  test "$?" -gt 0 && (echo "Could not enable ingress". Exiting ...) && exit 1
+}
+
+#######################################
+# Modify /etc/hosts.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes appended line to stdout.
+#######################################
+add_hosts() {
+  ip="$(minikube ip)"
+  echo "Need root access to modify /etc/hosts file,"
+  echo "please enter the root password"
+  echo "$ip mern-app.local" | sudo tee -a /etc/hosts
+  echo "$ip api.mern-app.local" | sudo tee -a /etc/hosts
+}
+
+#######################################
+# Install apllication with helm.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes to stdout if directory does
+#   not exist.
+#######################################
+helm_deploy() {
+  # check if directory exists
+  test -d "$CHART_LOC" || (echo "Could not find $CHART_LOC" && exit 1)
+  # create namespace
+  kubectl create namespace "$NAMESPACE"
+  # install chart
+  helm install "$CHART_NAME" "$CHART_LOC" -n "$NAMESPACE"
+}
+
+#######################################
+# Check status of minikube.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes minikube status to stdout.
+#######################################
+check_minikube_status() {
+  # Run minikube status to get status code
+  minikube status >/dev/null
+  # Start minikube if it is not started
+  test "$?" -gt 0 && \
+    (echo "Starting minikube ..." && minikube start >/dev/null) \
+    || echo "minikube is already running ..."
+}
+
+#######################################
+# Show status of deployment and services.
+# Globals:
+#   CHART_NAME, NAMESPACE
+# Arguments:
+#   None.
+# Outputs:
+#   Status of app every second to stdout.
+#######################################
+show_deployment_status() {
+  # if kubectl installed
+  # show deployment via kubectl
+  if [ -n "$(command -v "kubectl")" ]; then
+    watch --interval 1 kubectl get all -o wide -n "$NAMESPACE"
+  else
+    # or use helm
+    helm status "$CHART_NAME" -n "$NAMESPACE"
+  fi
+}
+
+#######################################
+# Show info.
+# Globals:
+#   DOMAIN
+# Outputs:
+#   Writes information to stdout.
+#######################################
+show_message() {
+  clear
+  echo "---------------------------------------------"
+  echo "Application is runnig under mern namespace."
+  echo "Deployment can take up to 2-5 min to start."
+  echo "When deployment finishes, go to $DOMAIN"
+  echo "---------------------------------------------"
+}
+
+# Main installation
+is_installed "minikube"
+is_installed "helm"
+check_minikube_status
+add_hosts
+helm_deploy
+minikube_enable_ingress
+show_message
+show_deployment_status

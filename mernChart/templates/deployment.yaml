@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mern-mongo
+  name: mern-mongo
+  namespace: mern
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mern-mongo
+  template:
+    metadata:
+      labels:
+        app: mern-mongo
+    spec:
+      containers:
+      - image: mongo
+        name: mongodb
+        ports:
+        - containerPort: 27017
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mern-server
+  name: mern-server
+  namespace: mern
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mern-server
+  template:
+    metadata:
+      labels:
+        app: mern-server
+    spec:
+      containers:
+      - image: 11me/mern_server:v1
+        name: mern-server
+        env:
+        - name: PORT
+          value: "3000"
+        - name: ATLAS_URI
+          value: "mongodb://mern-mongo:27017/myFirstDatabase"
+        ports:
+        - containerPort: 3000
+      initContainers:
+        - name: mern-mongo-health
+          image: 11me/mongo_health:v1
+          env:
+          - name: MONGO_URL
+            value: "mern-mongo:27017/myFirstDatabase"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mern-client
+  namespace: mern
+  labels:
+    app: mern-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mern-client
+  template:
+    metadata:
+      labels:
+        app: mern-client
+    spec:
+      containers:
+      - name: mern-client
+        image: 11me/mern_client:v1
+        env:
+        - name: PORT
+          value: "5000"
+        ports:
+        - containerPort: 5000

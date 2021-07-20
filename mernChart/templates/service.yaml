@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mern-mongo
+  name: mern-mongo
+  namespace: mern
+spec:
+  ports:
+  - port: 27017
+    protocol: TCP
+    targetPort: 27017
+  selector:
+    app: mern-mongo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mern-server
+  name: mern-server
+  namespace: mern
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: mern-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mern-client
+  name: mern-client
+  namespace: mern
+spec:
+  ports:
+  - port: 5000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: mern-client
